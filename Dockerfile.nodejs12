@@ -1,0 +1,39 @@
+FROM centos:centos7
+
+EXPOSE 8080
+
+
+ENV NODEJS_VERSION=12 \
+    NPM_RUN=start \
+    NAME=nodejs \
+    APP_ROOT=/opt/app-root/src \
+    PM2_HOME=/opt/app-root/src/ \
+    NPM_CONFIG_PREFIX=$HOME/.npm-global \
+    PATH=$HOME/node_modules/.bin/:$HOME/.npm-global/bin/:$PATH
+
+RUN mkdir -p ${APP_ROOT}
+
+RUN echo $HOME
+
+ADD rpm-file-permissions /root/rpm-file-permissions
+
+RUN yum install -y centos-release-scl-rh && \
+    ( [ "rh-${NAME}${NODEJS_VERSION}" != "${NODEJS_SCL}" ] && yum remove -y ${NODEJS_SCL}\* || : ) && \
+    INSTALL_PKGS="rh-nodejs${NODEJS_VERSION} rh-nodejs${NODEJS_VERSION}-npm rh-nodejs${NODEJS_VERSION}-nodejs-nodemon nss_wrapper zip unzip" && \
+    ln -s /usr/lib/node_modules/nodemon/bin/nodemon.js /usr/bin/nodemon && \
+    yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
+    rpm -V $INSTALL_PKGS && \
+    yum -y clean all --enablerepo='*'
+
+ENV PATH="/opt/rh/rh-nodejs12/root/usr/bin:${PATH}"
+RUN touch $HOME/module_conf.json
+
+# ADD module_conf.json $HOME/module_conf.json
+RUN echo "{}" > $HOME/module_conf.json
+
+RUN chown -R 1001:0 ${APP_ROOT} && chown -R 1001:0 $HOME && chmod -R ug+rwx ${APP_ROOT}
+WORKDIR ${APP_ROOT}
+
+# USER 1001
+
+CMD [ "npm", "start" ]
